@@ -29,9 +29,16 @@ ul.checks{list-style:none;padding:0;margin:0}
 li.item{display:flex;align-items:center;gap:12px;padding:8px;border-radius:8px}
 li.item:nth-child(odd){background:rgba(255,255,255,0.01)}
 label{display:flex;align-items:center;gap:10px;flex:1}
+.item > label { align-items: flex-start; }
+.item .chk { margin-top: 12px; }
 .name{font-weight:600}
 .muted{color:var(--muted);font-size:13px}
 input[type=number]{width:35px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+
+.bias-options{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.bias-line{display:flex;align-items:center;gap:10px;font-size:13px}
+.bias-line label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.bias-time{width:30px;font-weight:600}
 
 
 /* right panel */
@@ -114,7 +121,7 @@ button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);c
 // { id:'ema', name:'EMA 200 Bounce', weight:1, desc:'Price reacting to EMA 200' }
 
 const defaultItems = [
-  { id:'bias', name:'Daily Bias', weight:1.1, desc:'Trend in high timeframes align 1h, 4h, 1D' },
+  { id:'bias', name:'Daily Bias', weight:1.1, desc:'Trend in high timeframes align 1h, 4h, 1D', bias:true },
   { id:'liquidity', name:'Liquidity Swept', weight:1, desc:'High timeframe liquidty or session highs get swept' },
   { id:'bos', name:'Break Of Structure', weight:1, desc:'Candle closes after the closest high or low' },
   { id:'orderBlock', name:'Order Block', weight:1, desc:'Price comes back to the Order Block before continuing the reversal' },
@@ -131,6 +138,25 @@ const defaultItems = [
     const barFill = document.getElementById('barFill');
     const totalCountEl = document.getElementById('totalCount');
 
+    function createBiasBlock(){
+  return `
+    <div class="bias-options">
+      <div class="bias-line"><span class="bias-time">1D</span>
+        <label><input type="radio" name="bias-1D" value="bullish"> Bullish</label>
+        <label><input type="radio" name="bias-1D" value="bearish"> Bearish</label>
+      </div>
+      <div class="bias-line"><span class="bias-time">4H</span>
+        <label><input type="radio" name="bias-4H" value="bullish"> Bullish</label>
+        <label><input type="radio" name="bias-4H" value="bearish"> Bearish</label>
+      </div>
+      <div class="bias-line"><span class="bias-time">1H</span>
+        <label><input type="radio" name="bias-1H" value="bullish"> Bullish</label>
+        <label><input type="radio" name="bias-1H" value="bearish"> Bearish</label>
+      </div>
+    </div>
+  `;
+}
+
     function createItem(item){
       const li = document.createElement('li');
       li.className='item';
@@ -140,6 +166,7 @@ const defaultItems = [
           <div style="display:flex;flex-direction:column">
             <span class="name">${item.name}</span>
             <span class="muted">${item.desc}</span>
+             ${item.bias ? createBiasBlock() : ''}  
           </div>
         </label>
         <div style="display:flex;flex-direction:column;align-items:flex-end">
@@ -158,6 +185,20 @@ const defaultItems = [
       recalc();
     }
 
+    function makeBiasRadiosUncheckable() {
+  document.querySelectorAll('.bias-options input[type="radio"]').forEach(radio => {
+    radio.addEventListener("click", function () {
+      if (this.checked && this.dataset.wasChecked === "true") {
+        this.checked = false;
+        this.dataset.wasChecked = "false";
+      } else {
+        this.dataset.wasChecked = "true";
+      }
+      recalc();
+    });
+  });
+}
+
     function attachEvents(){
       checklistEl.querySelectorAll('.chk').forEach(chk=>{
         chk.addEventListener('change', recalc);
@@ -172,6 +213,8 @@ const defaultItems = [
         });
       });
       checklistEl.querySelectorAll('.weight').forEach(w=>w.addEventListener('input',recalc));
+
+      makeBiasRadiosUncheckable();
     }
 
     function recalc(){
