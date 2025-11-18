@@ -173,6 +173,7 @@ button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);c
 }
 
 #progressCircle { transition: stroke-dasharray 0.6s ease; }
+
 </style>
 </head>
 
@@ -181,10 +182,11 @@ button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);c
 <!-- ========================= -->
 <!--     CURRENCY PAIR BAR     -->
 <!-- ========================= -->
+
 <div id="pairBar">
-  <span id="editPair"><img src="image.png" class="edit-icon-img"></span>
-  <span id="pairDisplay" class="pair-display">Set pair</span>
-  <input id="pairInput" type="text" placeholder="Type pair..." />
+  <img src="image.png" class="edit-icon-img" id="editPair">
+  <span id="pairDisplay">SET PAIR</span>
+  <input id="pairInput" type="text" placeholder="TYPE PAIR..." />
 </div>
 
 <div class="container">
@@ -209,6 +211,7 @@ button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);c
         <svg width="170" height="170" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.06)" stroke-width="15" fill="none"></circle>
           <circle id="progressCircle" cx="60" cy="60" r="50" stroke="url(#g)" stroke-width="15" stroke-linecap="round" fill="none" stroke-dasharray="0 314"></circle>
+
           <defs>
             <linearGradient id="g" x1="0" x2="1">
               <stop offset="0" stop-color="#3b82f6" />
@@ -225,9 +228,7 @@ button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);c
 
       <div class="breakdown" id="breakdown"></div>
 
-      <div class="progress-bar" aria-hidden>
-        <i id="barFill"></i>
-      </div>
+      <div class="progress-bar"><i id="barFill"></i></div>
     </div>
   </div>
 </div>
@@ -254,28 +255,26 @@ const barFill = document.getElementById('barFill');
 const totalCountEl = document.getElementById('totalCount');
 
 // =========================
-// PAIR EDITOR LOGIC
+// PAIR INPUT LOGIC
 // =========================
+
 const editBtn = document.getElementById("editPair");
 const pairDisplay = document.getElementById("pairDisplay");
 const pairInput = document.getElementById("pairInput");
 
-function startEditing() {
-  pairDisplay.style.display = "none";
-  pairInput.style.display = "inline-block";
-  pairInput.value = pairDisplay.textContent === "Set pair" ? "" : pairDisplay.textContent;
-  pairInput.focus();
-}
-
-
 editBtn.addEventListener("click", startEditing);
 pairDisplay.addEventListener("click", startEditing);
 
+function startEditing() {
+  pairDisplay.style.display = "none";
+  pairInput.style.display = "inline-block";
+  pairInput.value = pairDisplay.textContent === "SET PAIR" ? "" : pairDisplay.textContent;
+  pairInput.focus();
+}
+
 pairInput.addEventListener("input", () => {
-  let val = pairInput.value.toUpperCase().replace(/[^A-Z]/g, ""); // only letters
-  if (val.length > 3) {
-    val = val.slice(0,3) + "/" + val.slice(3,6); // add "/" after first 3 letters
-  }
+  let val = pairInput.value.toUpperCase().replace(/[^A-Z]/g, "");
+  if (val.length > 3) val = val.slice(0,3) + "/" + val.slice(3,6);
   pairInput.value = val;
 });
 
@@ -290,10 +289,10 @@ pairInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") pairInput.blur();
 });
 
+// =========================
+// BIAS BLOCK
+// =========================
 
-// =========================
-// BIAS RADIO BLOCK BUILDER
-// =========================
 function createBiasBlock(){
   return `
     <div class="bias-options">
@@ -325,6 +324,7 @@ function createItem(item){
         ${item.bias ? createBiasBlock() : ''}
       </div>
     </label>
+
     <div style="display:flex;flex-direction:column;align-items:flex-end">
       <input class="weight" type="number" step="0.1" min="0" value="${item.weight}">
       <div class="muted" style="font-size:12px;margin-top:6px" data-id="pct-${item.id}">0%</div>
@@ -334,55 +334,88 @@ function createItem(item){
 }
 
 function renderList(items){
-  checklistEl.innerHTML='';
-  items.forEach(it=>checklistEl.appendChild(createItem(it)));
+  checklistEl.innerHTML = '';
+  items.forEach(it => checklistEl.appendChild(createItem(it)));
   totalCountEl.textContent = items.length;
   attachEvents();
   recalc();
 }
 
-function makeBiasRadiosUncheckable() {
-  document.querySelectorAll('.bias-options input[type="radio"]').forEach(radio => {
-    radio.addEventListener("click", function () {
-      if (this.checked && this.dataset.wasChecked === "true") {
+// =========================
+// UNCHECKABLE RADIOS
+// =========================
+
+function makeRadiosUncheckable(selector){
+  document.querySelectorAll(selector).forEach(radio => {
+    radio.addEventListener("click", function(){
+      if (this.checked && this.dataset.wasChecked === "true"){
         this.checked = false;
         this.dataset.wasChecked = "false";
       } else {
         this.dataset.wasChecked = "true";
       }
+      autoCheckDailyBias();
       recalc();
     });
   });
 }
 
+// =========================
+// AUTO CHECK DAILY BIAS
+// =========================
+
+function autoCheckDailyBias() {
+  const bull1D = document.querySelector(`input[name="bias-1D"][value="bullish"]`);
+  const bear1D = document.querySelector(`input[name="bias-1D"][value="bearish"]`);
+
+  const bull4H = document.querySelector(`input[name="bias-4H"][value="bullish"]`);
+  const bear4H = document.querySelector(`input[name="bias-4H"][value="bearish"]`);
+
+  const bull1H = document.querySelector(`input[name="bias-1H"][value="bullish"]`);
+  const bear1H = document.querySelector(`input[name="bias-1H"][value="bearish"]`);
+
+  const mainBiasChk = document.querySelector('.chk[data-id="bias"]');
+
+  const allBull = bull1D.checked && bull4H.checked && bull1H.checked;
+  const allBear = bear1D.checked && bear4H.checked && bear1H.checked;
+
+  if (allBull || allBear) {
+    mainBiasChk.checked = true;
+    mainBiasChk.dataset.wasChecked = "true";
+  } else {
+    mainBiasChk.checked = false;
+    mainBiasChk.dataset.wasChecked = "false";
+  }
+}
+
+// =========================
+// EVENTS
+// =========================
+
 function attachEvents(){
-  checklistEl.querySelectorAll('.chk').forEach(chk=>{
-    chk.addEventListener('change', recalc);
-    chk.addEventListener('click', function(){
-      if (this.checked && this.dataset.wasChecked === 'true') {
-        this.checked = false;
-        this.dataset.wasChecked = 'false';
-        recalc();
-      } else {
-        this.dataset.wasChecked = this.checked ? 'true' : 'false';
-      }
-    });
+  // weights
+  checklistEl.querySelectorAll('.weight').forEach(w => {
+    w.addEventListener('input', recalc);
   });
 
-  checklistEl.querySelectorAll('.weight').forEach(w=>w.addEventListener('input',recalc));
-  makeBiasRadiosUncheckable();
+  // main checkboxes
+  makeRadiosUncheckable('.chk');
+
+  // bias radios
+  makeRadiosUncheckable('.bias-options input[type="radio"]');
 }
 
 function recalc(){
   const rows = Array.from(checklistEl.querySelectorAll('li.item'));
   const weights = rows.map(r=>parseFloat(r.querySelector('.weight').value)||0);
-  const totalWeight = weights.reduce((a,b)=>a+b,0) || 0;
+  const totalWeight = weights.reduce((a,b)=>a+b,0);
   let checkedWeight = 0;
 
   rows.forEach((r,i)=>{
     const chk = r.querySelector('.chk');
     const w = weights[i];
     if (chk.checked) checkedWeight += w;
+
     const pctEl = r.querySelector('[data-id^="pct-"]');
     const pct = totalWeight>0 ? Math.round((w/totalWeight)*100) : 0;
     pctEl.textContent = pct + '%';
@@ -393,32 +426,35 @@ function recalc(){
 
   const circumference = 2 * Math.PI * 50;
   const dash = (percent/100)*circumference;
-  progressCircle.setAttribute('stroke-dasharray', dash + ' ' + (circumference-dash));
+  progressCircle.setAttribute('stroke-dasharray', `${dash} ${circumference-dash}`);
 
   barFill.style.width = percent + '%';
 
-  breakdownEl.innerHTML = rows.map((r,i)=>{
+  breakdownEl.innerHTML = rows.map(r=>{
     const name = r.querySelector('.name').textContent;
     const chk = r.querySelector('.chk').checked;
-    return `<div class="row"><div>${name}${chk?'<span style="color:lightgreen;margin-left:8px">●</span>':''}</div></div>`;
+    return `<div class='row'><div>${name}${chk?' <span style="color:lightgreen">●</span>':''}</div></div>`;
   }).join('');
 }
 
-function equalize(){
-  const weightEls = checklistEl.querySelectorAll('.weight');
-  weightEls.forEach(w=>w.value = (1).toFixed(1));
-  recalc();
-}
-
-document.getElementById('reset').addEventListener('click',()=>{
-  checklistEl.querySelectorAll('.chk').forEach(c=>c.checked=false);
-  checklistEl.querySelectorAll('.weight').forEach((w,i)=>w.value = defaultItems[i].weight);
+document.getElementById('equalize').addEventListener('click', () => {
+  document.querySelectorAll('.weight').forEach(w=>w.value = 1);
   recalc();
 });
 
-document.getElementById('equalize').addEventListener('click',equalize);
+document.getElementById('reset').addEventListener('click', () => {
+  checklistEl.querySelectorAll('.chk').forEach(c=>c.checked = false);
+  checklistEl.querySelectorAll('.weight').forEach((w,i)=>w.value = defaultItems[i].weight);
+  checklistEl.querySelectorAll('.bias-options input[type="radio"]').forEach(r=>{
+    r.checked = false;
+    r.dataset.wasChecked = "false";
+  });
+  recalc();
+});
 
+// INIT
 renderList(defaultItems);
+
 </script>
 
 </body>
